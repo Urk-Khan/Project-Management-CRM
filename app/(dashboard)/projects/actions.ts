@@ -89,6 +89,34 @@ export async function fetchProjectsAction(): Promise<ProjectRecord[]> {
   }
 }
 
+export async function fetchExistingProjectTypesAction(): Promise<string[]> {
+  try {
+    const session = await getCurrentSessionContext()
+
+    if (!session || !session.organization) {
+      return []
+    }
+
+    const res = await query<{ type: string }>(
+      `SELECT DISTINCT type 
+       FROM projects 
+       WHERE organization_id = $1 
+         AND type IS NOT NULL 
+         AND TRIM(type) != '' 
+       ORDER BY type ASC`,
+      [session.organization.id]
+    )
+
+    if (res.rows) {
+      return res.rows.map((item) => item.type.trim()).filter(Boolean)
+    }
+    return []
+  } catch (err) {
+    console.error('fetchExistingProjectTypesAction error:', err)
+    return []
+  }
+}
+
 export type CreateProjectActionResult = {
   success: boolean;
   projectId?: string;
@@ -108,7 +136,7 @@ export async function createProjectAction(formData: FormData): Promise<CreatePro
   const clientId = formData.get('client_id')?.toString().trim()
   const title = formData.get('title')?.toString().trim()
   const description = formData.get('description')?.toString().trim() || null
-  const type = formData.get('type')?.toString().trim() || 'Combined'
+  const type = formData.get('type')?.toString().trim() || null
   const brief_source = formData.get('brief_source')?.toString().trim() || 'WhatsApp'
   const amount = parseFloat(formData.get('amount')?.toString() || '0')
   const currency = formData.get('currency')?.toString().trim() || 'USD'

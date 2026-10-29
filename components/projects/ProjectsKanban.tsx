@@ -531,6 +531,7 @@ export function ProjectsKanban({ initialProjects, clientsList, membersList }: Pr
           clientsList={clientsList}
           membersList={membersList}
           initialClientId={newModalInitialClient}
+          existingTypes={Array.from(new Set(projects.map((p) => p.type?.trim()).filter(Boolean))) as string[]}
         />
       )}
 

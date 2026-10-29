@@ -370,6 +370,7 @@ export function ProjectsList({ initialProjects, clientsList, membersList, templa
           clientsList={clientsList}
           membersList={membersList}
           templatesList={templatesList}
+          existingTypes={Array.from(new Set(projects.map((p) => p.type?.trim()).filter(Boolean))) as string[]}
         />
       )}
 

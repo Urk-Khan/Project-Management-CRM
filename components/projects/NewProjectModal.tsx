@@ -1,8 +1,8 @@
 'use client'
 
-import { useState } from 'react'
-import { createProjectAction } from '@/app/(dashboard)/projects/actions'
-import { X, Briefcase, Plus, Loader2, Calendar, DollarSign, User, Shield } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { createProjectAction, fetchExistingProjectTypesAction } from '@/app/(dashboard)/projects/actions'
+import { X, Briefcase, Plus, Loader2, Calendar, DollarSign, User, Shield, ChevronDown, Check } from 'lucide-react'
 
 interface NewProjectModalProps {
   isOpen: boolean
@@ -12,6 +12,7 @@ interface NewProjectModalProps {
   membersList: { id: string; name: string }[]
   templatesList?: { id: string; name: string; type?: string | null; default_amount?: number; description?: string | null }[]
   initialClientId?: string
+  existingTypes?: string[]
 }
 
 export function NewProjectModal({
@@ -22,12 +23,16 @@ export function NewProjectModal({
   membersList,
   templatesList = [],
   initialClientId,
+  existingTypes = [],
 }: NewProjectModalProps) {
   const [clientId, setClientId] = useState(initialClientId || clientsList[0]?.id || '')
   const [templateId, setTemplateId] = useState('')
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
-  const [type, setType] = useState('Combined')
+  const [type, setType] = useState('')
+  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false)
+  const [availableTypes, setAvailableTypes] = useState<string[]>(existingTypes)
+  const typeDropdownRef = useRef<HTMLDivElement>(null)
   const [briefSource, setBriefSource] = useState('WhatsApp')
   const [amount, setAmount] = useState('')
   const [currency, setCurrency] = useState('USD')
@@ -40,6 +45,34 @@ export function NewProjectModal({
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isOpen) {
+      setType('')
+      setIsTypeDropdownOpen(false)
+      if (existingTypes.length > 0) {
+        setAvailableTypes(existingTypes)
+      } else {
+        fetchExistingProjectTypesAction().then((types) => {
+          if (types && types.length > 0) {
+            setAvailableTypes(types)
+          }
+        })
+      }
+    }
+  }, [isOpen, existingTypes])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (typeDropdownRef.current && !typeDropdownRef.current.contains(event.target as Node)) {
+        setIsTypeDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   const handleTemplateSelect = (selectedTmplId: string) => {
     setTemplateId(selectedTmplId)
@@ -193,19 +226,83 @@ export function NewProjectModal({
 
           {/* Type & Brief Source */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
+            <div ref={typeDropdownRef} className="relative">
               <label className="block text-muted-foreground font-semibold mb-1">Project Type</label>
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-foreground focus:border-primary focus:outline-none"
-              >
-                <option value="UGC Media">UGC Media</option>
-                <option value="AI Voice Agent">AI Voice Agent</option>
-                <option value="Automation">Automation</option>
-                <option value="Web Development">Web Development</option>
-                <option value="Combined">Combined Agency Service</option>
-              </select>
+              <div className="relative">
+                <input
+                  type="text"
+                  list="project-type-suggestions"
+                  value={type}
+                  onChange={(e) => {
+                    setType(e.target.value)
+                    setIsTypeDropdownOpen(true)
+                  }}
+                  onFocus={() => {
+                    if (availableTypes.length > 0) setIsTypeDropdownOpen(true)
+                  }}
+                  placeholder={
+                    availableTypes.length > 0
+                      ? 'Select or enter project type...'
+                      : 'Enter project type (e.g. AI, Web)...'
+                  }
+                  className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-foreground placeholder:text-placeholder focus:border-primary focus:outline-none pr-9"
+                />
+                {availableTypes.length > 0 && (
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setIsTypeDropdownOpen((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition"
+                  >
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform duration-200 ${
+                        isTypeDropdownOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                )}
+
+                <datalist id="project-type-suggestions">
+                  {availableTypes.map((t) => (
+                    <option key={t} value={t} />
+                  ))}
+                </datalist>
+              </div>
+
+              {isTypeDropdownOpen && availableTypes.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 z-30 max-h-48 overflow-y-auto rounded-xl border border-border bg-card p-1 shadow-2xl backdrop-blur-md">
+                  {availableTypes
+                    .filter((t) => !type || t.toLowerCase().includes(type.toLowerCase()))
+                    .map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          setType(t)
+                          setIsTypeDropdownOpen(false)
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition flex items-center justify-between ${
+                          type.toLowerCase() === t.toLowerCase()
+                            ? 'bg-primary/10 text-primary font-semibold'
+                            : 'text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <span>{t}</span>
+                        {type.toLowerCase() === t.toLowerCase() && (
+                          <Check className="h-3.5 w-3.5 text-primary" />
+                        )}
+                      </button>
+                    ))}
+                  {type.trim() &&
+                    !availableTypes.some(
+                      (t) => t.toLowerCase() === type.trim().toLowerCase()
+                    ) && (
+                      <div className="px-3 py-1.5 text-[11px] text-muted-foreground border-t border-border/50 mt-1">
+                        New type: <span className="font-semibold text-foreground">"{type}"</span>
+                      </div>
+                    )}
+                </div>
+              )}
             </div>
 
             <div>
