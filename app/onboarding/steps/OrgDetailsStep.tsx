@@ -1,6 +1,7 @@
 'use client'
 
-import { Building2, Layers } from 'lucide-react'
+import { useState } from 'react'
+import { Building2, Layers, Briefcase } from 'lucide-react'
 
 interface OrgDetailsStepProps {
   orgName: string
@@ -26,11 +27,35 @@ export default function OrgDetailsStep({
   setIndustryType,
   onNext,
 }: OrgDetailsStepProps) {
+  const isPredefined = INDUSTRIES.includes(industryType)
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    isPredefined ? industryType : industryType ? 'Other' : INDUSTRIES[0]
+  )
+  const [customService, setCustomService] = useState<string>(
+    isPredefined ? '' : industryType === 'Other' ? '' : industryType
+  )
+
+  const handleCategoryChange = (val: string) => {
+    setSelectedCategory(val)
+    if (val === 'Other') {
+      setIndustryType(customService.trim() || 'Other')
+    } else {
+      setIndustryType(val)
+    }
+  }
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    if (orgName.trim()) {
-      onNext()
+    if (!orgName.trim()) return
+
+    if (selectedCategory === 'Other') {
+      const finalCustom = customService.trim()
+      if (!finalCustom) return
+      setIndustryType(finalCustom)
+    } else {
+      setIndustryType(selectedCategory)
     }
+    onNext()
   }
 
   return (
@@ -73,8 +98,8 @@ export default function OrgDetailsStep({
               <Layers className="w-5 h-5" />
             </div>
             <select
-              value={industryType}
-              onChange={(e) => setIndustryType(e.target.value)}
+              value={selectedCategory}
+              onChange={(e) => handleCategoryChange(e.target.value)}
               className="block w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-sm transition-all"
             >
               {INDUSTRIES.map((ind) => (
@@ -82,9 +107,37 @@ export default function OrgDetailsStep({
                   {ind}
                 </option>
               ))}
+              <option value="Other" className="bg-slate-900 text-slate-100">
+                Other
+              </option>
             </select>
           </div>
         </div>
+
+        {selectedCategory === 'Other' && (
+          <div className="animate-in fade-in slide-in-from-top-2 duration-200">
+            <label className="block text-sm font-medium text-slate-300 mb-1.5">
+              Other Service / Business Category
+            </label>
+            <div className="relative rounded-xl">
+              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <Briefcase className="w-5 h-5" />
+              </div>
+              <input
+                type="text"
+                required
+                value={customService}
+                onChange={(e) => {
+                  const val = e.target.value
+                  setCustomService(val)
+                  setIndustryType(val.trim() || 'Other')
+                }}
+                placeholder="e.g. Real Estate, Healthcare, Consulting..."
+                className="block w-full pl-10 pr-4 py-2.5 bg-slate-950/60 border border-slate-800 rounded-xl text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 text-sm transition-all"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="pt-4 flex justify-end">
