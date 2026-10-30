@@ -389,6 +389,7 @@ export function ProjectsList({ initialProjects, clientsList, membersList, templa
           }}
           project={editingProject}
           membersList={membersList}
+          existingTypes={existingTypes}
         />
       )}
     </div>

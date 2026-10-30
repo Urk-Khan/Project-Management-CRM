@@ -31,6 +31,22 @@ export interface ProjectRecord {
   updated_at: string
 }
 
+function formatDateToYYYYMMDD(dateVal: any): string | null {
+  if (!dateVal) return null
+  const str = String(dateVal).trim()
+  if (!str) return null
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str
+  if (/^\d{4}-\d{2}-\d{2}T/.test(str)) return str.slice(0, 10)
+  const d = new Date(str)
+  if (!isNaN(d.getTime())) {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  return null
+}
+
 export async function fetchProjectsAction(): Promise<ProjectRecord[]> {
   try {
     const session = await getCurrentSessionContext()
@@ -69,8 +85,8 @@ export async function fetchProjectsAction(): Promise<ProjectRecord[]> {
           currency: item.currency || 'USD',
           status: item.status || 'Active',
           priority: item.priority || 'medium',
-          start_date: item.start_date,
-          deadline: item.deadline,
+          start_date: formatDateToYYYYMMDD(item.start_date),
+          deadline: formatDateToYYYYMMDD(item.deadline),
           assigned_to: item.assigned_to,
           assigned_name: item.assigned_name || item.assigned_email || null,
           notes: item.notes,
@@ -142,8 +158,8 @@ export async function createProjectAction(formData: FormData): Promise<CreatePro
   const currency = formData.get('currency')?.toString().trim() || 'USD'
   const status = formData.get('status')?.toString().trim() || 'Active'
   const priority = formData.get('priority')?.toString().trim() || 'medium'
-  const start_date = formData.get('start_date')?.toString().trim() || null
-  const deadline = formData.get('deadline')?.toString().trim() || null
+  const start_date = formatDateToYYYYMMDD(formData.get('start_date'))
+  const deadline = formatDateToYYYYMMDD(formData.get('deadline'))
   const assigned_to = formData.get('assigned_to')?.toString().trim() || null
   const notes = formData.get('notes')?.toString().trim() || null
   const template_id = formData.get('template_id')?.toString().trim() || null
@@ -323,13 +339,13 @@ export async function updateProjectAction(projectId: string, formData: FormData)
   try {
     const title = formData.get('title')?.toString().trim()
     const description = formData.get('description')?.toString().trim() || null
-    const type = formData.get('type')?.toString().trim() || 'Combined'
+    const type = formData.get('type')?.toString().trim() || null
     const amount = parseFloat(formData.get('amount')?.toString() || '0')
     const currency = formData.get('currency')?.toString().trim() || 'USD'
     const status = formData.get('status')?.toString().trim() || 'Active'
     const priority = formData.get('priority')?.toString().trim() || 'medium'
-    const start_date = formData.get('start_date')?.toString().trim() || null
-    const deadline = formData.get('deadline')?.toString().trim() || null
+    const start_date = formatDateToYYYYMMDD(formData.get('start_date'))
+    const deadline = formatDateToYYYYMMDD(formData.get('deadline'))
     const assigned_to = formData.get('assigned_to')?.toString().trim() || null
     const notes = formData.get('notes')?.toString().trim() || null
 

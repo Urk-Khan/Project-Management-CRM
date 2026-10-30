@@ -550,6 +550,7 @@ export function ProjectsKanban({ initialProjects, clientsList, membersList }: Pr
           }}
           project={editingProject}
           membersList={membersList}
+          existingTypes={existingTypes}
         />
       )}
 

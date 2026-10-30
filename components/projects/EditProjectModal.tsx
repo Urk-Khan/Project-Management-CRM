@@ -1,8 +1,24 @@
 'use client'
 
-import { useState } from 'react'
-import { ProjectRecord, updateProjectAction } from '@/app/(dashboard)/projects/actions'
-import { X, Briefcase, Save, Loader2 } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { ProjectRecord, updateProjectAction, fetchExistingProjectTypesAction } from '@/app/(dashboard)/projects/actions'
+import { X, Briefcase, Save, Loader2, ChevronDown, Check } from 'lucide-react'
+
+function formatDateForInput(dateVal: any): string {
+  if (!dateVal) return ''
+  const str = String(dateVal).trim()
+  if (!str) return ''
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str
+  if (/^\d{4}-\d{2}-\d{2}T/.test(str)) return str.slice(0, 10)
+  const d = new Date(str)
+  if (!isNaN(d.getTime())) {
+    const year = d.getFullYear()
+    const month = String(d.getMonth() + 1).padStart(2, '0')
+    const day = String(d.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+  }
+  return ''
+}
 
 interface EditProjectModalProps {
   project: ProjectRecord
@@ -10,6 +26,7 @@ interface EditProjectModalProps {
   onClose: () => void
   onSuccess?: () => void
   membersList: { id: string; name: string }[]
+  existingTypes?: string[]
 }
 
 export function EditProjectModal({
@@ -18,21 +35,69 @@ export function EditProjectModal({
   onClose,
   onSuccess,
   membersList,
+  existingTypes = [],
 }: EditProjectModalProps) {
   const [title, setTitle] = useState(project.title)
   const [description, setDescription] = useState(project.description || '')
-  const [type, setType] = useState(project.type || 'Combined')
+  const [type, setType] = useState(project.type || '')
+  const [isTypeDropdownOpen, setIsTypeDropdownOpen] = useState(false)
+  const [availableTypes, setAvailableTypes] = useState<string[]>(existingTypes)
+  const typeDropdownRef = useRef<HTMLDivElement>(null)
   const [amount, setAmount] = useState(project.amount ? project.amount.toString() : '')
   const [currency, setCurrency] = useState(project.currency || 'USD')
   const [status, setStatus] = useState(project.status || 'Active')
   const [priority, setPriority] = useState(project.priority || 'medium')
-  const [startDate, setStartDate] = useState(project.start_date || '')
-  const [deadline, setDeadline] = useState(project.deadline || '')
+  const [startDate, setStartDate] = useState(formatDateForInput(project.start_date))
+  const [deadline, setDeadline] = useState(formatDateForInput(project.deadline))
   const [assignedTo, setAssignedTo] = useState(project.assigned_to || '')
   const [notes, setNotes] = useState(project.notes || '')
 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isOpen) {
+      setTitle(project.title || '')
+      setDescription(project.description || '')
+      setType(project.type || '')
+      setAmount(project.amount ? project.amount.toString() : '')
+      setCurrency(project.currency || 'USD')
+      setStatus(project.status || 'Active')
+      setPriority(project.priority || 'medium')
+      setStartDate(formatDateForInput(project.start_date))
+      setDeadline(formatDateForInput(project.deadline))
+      setAssignedTo(project.assigned_to || '')
+      setNotes(project.notes || '')
+      setIsTypeDropdownOpen(false)
+      setError(null)
+
+      if (existingTypes && existingTypes.length > 0) {
+        setAvailableTypes(existingTypes)
+      } else {
+        fetchExistingProjectTypesAction()
+          .then((types) => {
+            if (types && Array.isArray(types) && types.length > 0) {
+              setAvailableTypes(types)
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to fetch project types:', err)
+          })
+      }
+    }
+  }, [isOpen, project.id])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (typeDropdownRef.current && !typeDropdownRef.current.contains(event.target as Node)) {
+        setIsTypeDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   if (!isOpen) return null
 
@@ -124,19 +189,77 @@ export function EditProjectModal({
 
           {/* Type, Amount & Currency */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
+            <div ref={typeDropdownRef} className="relative">
               <label className="block text-muted-foreground font-semibold mb-1">Type</label>
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-foreground focus:border-primary focus:outline-none"
-              >
-                <option value="UGC Media">UGC Media</option>
-                <option value="AI Voice Agent">AI Voice Agent</option>
-                <option value="Automation">Automation</option>
-                <option value="Web Development">Web Development</option>
-                <option value="Combined">Combined Agency Service</option>
-              </select>
+              <div className="relative">
+                <input
+                  type="text"
+                  autoComplete="off"
+                  value={type}
+                  onChange={(e) => {
+                    setType(e.target.value)
+                    setIsTypeDropdownOpen(true)
+                  }}
+                  onFocus={() => {
+                    if (availableTypes.length > 0) setIsTypeDropdownOpen(true)
+                  }}
+                  placeholder={
+                    availableTypes.length > 0
+                      ? 'Select or enter project type...'
+                      : 'Enter project type (e.g. AI, Web)...'
+                  }
+                  className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-foreground placeholder:text-placeholder focus:border-primary focus:outline-none pr-9"
+                />
+                {availableTypes.length > 0 && (
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    onClick={() => setIsTypeDropdownOpen((prev) => !prev)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-muted-foreground hover:text-foreground transition"
+                  >
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform duration-200 ${
+                        isTypeDropdownOpen ? 'rotate-180' : ''
+                      }`}
+                    />
+                  </button>
+                )}
+              </div>
+
+              {isTypeDropdownOpen && availableTypes.length > 0 && (
+                <div className="absolute left-0 right-0 top-full mt-1.5 z-50 max-h-48 overflow-y-auto rounded-xl border border-border bg-card p-1 shadow-2xl backdrop-blur-md">
+                  {availableTypes
+                    .filter((t) => !type || t.toLowerCase().includes(type.toLowerCase()))
+                    .map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => {
+                          setType(t)
+                          setIsTypeDropdownOpen(false)
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded-lg text-xs transition flex items-center justify-between ${
+                          type.toLowerCase() === t.toLowerCase()
+                            ? 'bg-primary/10 text-primary font-semibold'
+                            : 'text-foreground hover:bg-muted'
+                        }`}
+                      >
+                        <span>{t}</span>
+                        {type.toLowerCase() === t.toLowerCase() && (
+                          <Check className="h-3.5 w-3.5 text-primary" />
+                        )}
+                      </button>
+                    ))}
+                  {type.trim() &&
+                    !availableTypes.some(
+                      (t) => t.toLowerCase() === type.trim().toLowerCase()
+                    ) && (
+                      <div className="px-3 py-1.5 text-[11px] text-muted-foreground border-t border-border/50 mt-1">
+                        New type: <span className="font-semibold text-foreground">&quot;{type}&quot;</span>
+                      </div>
+                    )}
+                </div>
+              )}
             </div>
 
             <div>
