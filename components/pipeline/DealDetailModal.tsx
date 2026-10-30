@@ -42,6 +42,50 @@ interface DealDetailModalProps {
   onDealDeleted?: (dealId: string) => void;
 }
 
+function formatActivityMessage(act: DealActivity): string {
+  const data = act.data || act.metadata || {};
+  const actionType = act.type || act.action;
+  switch (actionType) {
+    case 'created':
+      return `created this deal${data.stage_name ? ` in ${data.stage_name}` : ''}`;
+    case 'moved':
+      return `moved deal${data.from_stage_name ? ` from ${data.from_stage_name}` : ''}${data.to_stage_name ? ` to ${data.to_stage_name}` : ''}`;
+    case 'won':
+      return 'marked deal as Won 🏆';
+    case 'lost':
+      return `marked deal as Lost${data.lost_reason ? `: "${data.lost_reason}"` : ''}`;
+    case 'reopened':
+      return 'reopened this deal';
+    case 'comment_added':
+      return 'added a comment';
+    case 'checklist_added':
+      return `added checklist "${data.title || ''}"`;
+    case 'checklist_updated':
+      return 'updated checklist';
+    case 'checklist_item_added':
+      return `added item "${data.title || ''}" to checklist`;
+    case 'checklist_item_completed':
+      return `completed checklist item "${data.title || ''}"`;
+    case 'checklist_item_uncompleted':
+      return `unmarked checklist item "${data.title || ''}"`;
+    case 'archived':
+      return 'archived this deal';
+    case 'restored':
+      return 'restored this deal';
+    case 'updated': {
+      if (data.changes && typeof data.changes === 'object') {
+        const fields = Object.keys(data.changes);
+        if (fields.length > 0) {
+          return `updated ${fields.join(', ')}`;
+        }
+      }
+      return 'updated deal details';
+    }
+    default:
+      return act.action || 'updated this deal';
+  }
+}
+
 export function DealDetailModal({
   dealId,
   pipelineId,
@@ -73,6 +117,25 @@ export function DealDetailModal({
   const [newLabelColor, setNewLabelColor] = useState('#38bdf8');
   const [creatingLabel, setCreatingLabel] = useState(false);
 
+  const fetchActivity = useCallback(async () => {
+    if (!dealId) return;
+    try {
+      const actRes = await fetch(`/api/deals/${dealId}/activity`);
+      const actJson = await actRes.json();
+
+      if (actJson.data) {
+        const items = Array.isArray(actJson.data)
+          ? actJson.data
+          : Array.isArray(actJson.data.items)
+          ? actJson.data.items
+          : [];
+        setActivities(items);
+      }
+    } catch (err) {
+      console.error('Failed to load deal activity:', err);
+    }
+  }, [dealId]);
+
   const fetchDealDetails = useCallback(async () => {
     if (!dealId) return;
     try {
@@ -86,23 +149,23 @@ export function DealDetailModal({
       // Fetch checklists
       const clRes = await fetch(`/api/deals/${dealId}/checklists`);
       const clJson = await clRes.json();
-      if (clJson.data) setChecklists(clJson.data);
+      if (clJson.data) setChecklists(Array.isArray(clJson.data) ? clJson.data : []);
 
       // Fetch comments
       const cmRes = await fetch(`/api/deals/${dealId}/comments`);
       const cmJson = await cmRes.json();
-      if (cmJson.data) setComments(cmJson.data);
+      if (cmJson.data) setComments(Array.isArray(cmJson.data) ? cmJson.data : []);
 
       // Fetch activity
-      const actRes = await fetch(`/api/deals/${dealId}/activity`);
-      const actJson = await actRes.json();
-      if (actJson.data) setActivities(actJson.data);
+      await fetchActivity();
+
+
     } catch (err) {
       console.error('Failed to load deal details', err);
     } finally {
       setLoading(false);
     }
-  }, [dealId]);
+  }, [dealId, fetchActivity]);
 
   useEffect(() => {
     if (dealId) {
@@ -319,6 +382,7 @@ export function DealDetailModal({
       if (json.data) {
         setComments((prev) => [json.data, ...prev]);
         setNewComment('');
+        fetchActivity();
       }
     } catch (err) {
       console.error(err);
@@ -343,6 +407,8 @@ export function DealDetailModal({
   };
 
   const currentStage = stages.find((s) => s.id === deal?.stage_id);
+  const safeComments = Array.isArray(comments) ? comments : [];
+  const safeActivities = Array.isArray(activities) ? activities : [];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in duration-200">
@@ -599,7 +665,7 @@ export function DealDetailModal({
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <MessageSquare className="h-3.5 w-3.5" /> Comments ({comments.length})
+                    <MessageSquare className="h-3.5 w-3.5" /> Comments ({safeComments.length})
                   </button>
                   <button
                     onClick={() => setActiveTab('activity')}
@@ -609,7 +675,7 @@ export function DealDetailModal({
                         : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    <History className="h-3.5 w-3.5" /> Activity Stream
+                    <History className="h-3.5 w-3.5" /> Activity Stream ({safeActivities.length})
                   </button>
                 </div>
 
@@ -632,13 +698,13 @@ export function DealDetailModal({
                     </form>
 
                     <div className="space-y-2">
-                      {comments.map((cm) => (
+                      {safeComments.map((cm) => (
                         <div key={cm.id} className="rounded-xl border border-slate-800/80 bg-slate-950/40 p-3 space-y-1">
                           <div className="flex items-center justify-between text-[11px] text-slate-400">
                             <span className="font-semibold text-slate-200">
                               {cm.author_name || cm.author_email || 'Team Member'}
                             </span>
-                            <span>{new Date(cm.created_at).toLocaleString()}</span>
+                            <span>{cm.created_at ? new Date(cm.created_at).toLocaleString() : ''}</span>
                           </div>
                           <p className="text-xs text-slate-300 leading-relaxed">{cm.content}</p>
                         </div>
@@ -648,17 +714,29 @@ export function DealDetailModal({
                 )}
 
                 {activeTab === 'activity' && (
-                  <div className="space-y-2">
-                    {activities.map((act) => (
-                      <div key={act.id} className="flex items-start gap-2.5 text-xs text-slate-300 py-1">
-                        <div className="h-2 w-2 rounded-full bg-sky-400 mt-1.5 flex-shrink-0" />
-                        <div className="flex-1">
-                          <span className="font-semibold text-white">{act.actor_name || 'User'}</span>{' '}
-                          <span className="text-slate-400">{act.action}</span>
-                          <div className="text-[10px] text-slate-500">{new Date(act.created_at).toLocaleString()}</div>
-                        </div>
+                  <div className="space-y-3">
+                    {safeActivities.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center py-8 text-center bg-slate-950/20 rounded-xl border border-slate-800/40">
+                        <History className="h-8 w-8 text-slate-600 mb-2" />
+                        <p className="text-xs text-slate-400 font-semibold">No activity recorded yet</p>
+                        <p className="text-[11px] text-slate-500 mt-0.5">Stage moves, updates, and comments will be logged here.</p>
                       </div>
-                    ))}
+                    ) : (
+                      <div className="space-y-2">
+                        {safeActivities.map((act) => (
+                          <div key={act.id} className="flex items-start gap-2.5 text-xs text-slate-300 py-1.5 border-b border-slate-800/40 last:border-b-0">
+                            <div className="h-2 w-2 rounded-full bg-sky-400 mt-1.5 flex-shrink-0" />
+                            <div className="flex-1">
+                              <span className="font-semibold text-white">{act.actor_name || 'User'}</span>{' '}
+                              <span className="text-slate-400">{formatActivityMessage(act)}</span>
+                              <div className="text-[10px] text-slate-500 mt-0.5">
+                                {act.created_at ? new Date(act.created_at).toLocaleString() : ''}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

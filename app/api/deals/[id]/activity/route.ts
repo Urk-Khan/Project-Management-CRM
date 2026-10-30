@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     const before = searchParams.get('before') || undefined;
 
     const activities = await listActivity(session.orgId!, id, limit, before);
-    return jsonOk(activities);
+    return jsonOk(activities.items);
   } catch (error: any) {
     return jsonError('INTERNAL_ERROR', error.message || 'Failed to list deal activity', 500);
   }
