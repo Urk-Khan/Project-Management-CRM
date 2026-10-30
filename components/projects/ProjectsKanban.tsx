@@ -29,6 +29,7 @@ import { ProjectRecord, updateProjectStatusAction, deleteProjectAction } from '@
 import { NewProjectModal } from './NewProjectModal'
 import { EditProjectModal } from './EditProjectModal'
 import { DeliverProjectConfirmModal } from './DeliverProjectConfirmModal'
+import { DeleteProjectModal } from './DeleteProjectModal'
 import { ProjectHealthBadge } from '@/components/shared/ProjectHealthBadge'
 
 export interface ProjectsKanbanProps {
@@ -132,6 +133,8 @@ export function ProjectsKanban({ initialProjects, clientsList, membersList }: Pr
   const [editingProject, setEditingProject] = useState<ProjectRecord | null>(null)
   const [deliverModalProject, setDeliverModalProject] = useState<ProjectRecord | null>(null)
   const [isDelivering, setIsDelivering] = useState(false)
+  const [deletingProject, setDeletingProject] = useState<ProjectRecord | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Quick menu active card id
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null)
@@ -203,20 +206,23 @@ export function ProjectsKanban({ initialProjects, clientsList, membersList }: Pr
     await executeMoveStatus(projectId, targetStatus)
   }
 
-  // Handle Delete
-  const handleDelete = async (projectId: string) => {
-    if (!confirm('Are you sure you want to delete this project?')) return
-    const prev = [...projects]
-    setProjects((p) => p.filter((x) => x.id !== projectId))
+  // Handle Delete Confirmation
+  const handleConfirmDelete = async () => {
+    if (!deletingProject) return
+    setIsDeleting(true)
     try {
-      const res = await deleteProjectAction(projectId)
-      if (!res.success) {
-        setProjects(prev)
+      const res = await deleteProjectAction(deletingProject.id)
+      if (res.success) {
+        setProjects((prev) => prev.filter((p) => p.id !== deletingProject.id))
+        setDeletingProject(null)
+        router.refresh()
+      } else {
         alert(res.error || 'Failed to delete project')
       }
     } catch (err: any) {
-      setProjects(prev)
       alert(err.message || 'Error deleting project')
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -485,7 +491,7 @@ export function ProjectsKanban({ initialProjects, clientsList, membersList }: Pr
                                   <button
                                     onClick={() => {
                                       setActiveMenuId(null)
-                                      handleDelete(project.id)
+                                      setDeletingProject(project)
                                     }}
                                     className="w-full text-left px-3 py-1.5 hover:bg-destructive/10 text-destructive flex items-center gap-2"
                                   >
@@ -600,6 +606,17 @@ export function ProjectsKanban({ initialProjects, clientsList, membersList }: Pr
           clientName={deliverModalProject.client_name || 'Client Profile'}
           amount={deliverModalProject.amount || 0}
           currency={deliverModalProject.currency || 'USD'}
+        />
+      )}
+
+      {deletingProject && (
+        <DeleteProjectModal
+          isOpen={!!deletingProject}
+          onClose={() => setDeletingProject(null)}
+          onConfirm={handleConfirmDelete}
+          isLoading={isDeleting}
+          projectTitle={deletingProject.title}
+          clientName={deletingProject.client_name}
         />
       )}
     </div>

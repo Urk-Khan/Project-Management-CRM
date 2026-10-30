@@ -22,6 +22,7 @@ import { ProjectHealthBadge } from '@/components/shared/ProjectHealthBadge'
 import { ProjectFilters, ProjectFiltersState } from './ProjectFilters'
 import { NewProjectModal } from './NewProjectModal'
 import { EditProjectModal } from './EditProjectModal'
+import { DeleteProjectModal } from './DeleteProjectModal'
 import { ProjectRecord, updateProjectAction, deleteProjectAction } from '@/app/(dashboard)/projects/actions'
 
 interface ProjectsListProps {
@@ -100,7 +101,8 @@ export function ProjectsList({ initialProjects, clientsList, membersList, templa
 
   const [isNewModalOpen, setIsNewModalOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<ProjectRecord | null>(null)
-  const [isDeletingId, setIsDeletingId] = useState<string | null>(null)
+  const [deletingProject, setDeletingProject] = useState<ProjectRecord | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const [isUpdatingStatusId, setIsUpdatingStatusId] = useState<string | null>(null)
 
   // Filter projects
@@ -155,17 +157,16 @@ export function ProjectsList({ initialProjects, clientsList, membersList, templa
     }
   }
 
-  // Delete project
-  const handleDeleteProject = async (projectId: string) => {
-    if (!confirm('Are you sure you want to delete this project? This action cannot be undone.')) {
-      return
-    }
+  // Delete project confirmed
+  const handleConfirmDelete = async () => {
+    if (!deletingProject) return
 
-    setIsDeletingId(projectId)
+    setIsDeleting(true)
     try {
-      const res = await deleteProjectAction(projectId)
+      const res = await deleteProjectAction(deletingProject.id)
       if (res.success) {
-        setProjects((prev) => prev.filter((p) => p.id !== projectId))
+        setProjects((prev) => prev.filter((p) => p.id !== deletingProject.id))
+        setDeletingProject(null)
         router.refresh()
       } else {
         alert(res.error || 'Failed to delete project')
@@ -173,7 +174,7 @@ export function ProjectsList({ initialProjects, clientsList, membersList, templa
     } catch (err: any) {
       alert(err.message || 'Error deleting project')
     } finally {
-      setIsDeletingId(null)
+      setIsDeleting(false)
     }
   }
 
@@ -399,10 +400,9 @@ export function ProjectsList({ initialProjects, clientsList, membersList, templa
                           </button>
 
                           <button
-                            onClick={() => handleDeleteProject(project.id)}
+                            onClick={() => setDeletingProject(project)}
                             className="p-1.5 text-destructive hover:text-destructive hover:bg-destructive/10 rounded transition"
                             title="Delete Project"
-                            disabled={isDeletingId === project.id}
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
@@ -461,6 +461,17 @@ export function ProjectsList({ initialProjects, clientsList, membersList, templa
           project={editingProject}
           membersList={membersList}
           existingTypes={existingTypes}
+        />
+      )}
+
+      {deletingProject && (
+        <DeleteProjectModal
+          isOpen={!!deletingProject}
+          onClose={() => setDeletingProject(null)}
+          onConfirm={handleConfirmDelete}
+          isLoading={isDeleting}
+          projectTitle={deletingProject.title}
+          clientName={deletingProject.client_name}
         />
       )}
     </div>
