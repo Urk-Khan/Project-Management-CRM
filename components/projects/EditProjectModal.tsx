@@ -24,7 +24,7 @@ interface EditProjectModalProps {
   project: ProjectRecord
   isOpen: boolean
   onClose: () => void
-  onSuccess?: () => void
+  onSuccess?: (updatedProject?: ProjectRecord) => void
   membersList: { id: string; name: string }[]
   existingTypes?: string[]
 }
@@ -46,7 +46,7 @@ export function EditProjectModal({
   const [amount, setAmount] = useState(project.amount ? project.amount.toString() : '')
   const [currency, setCurrency] = useState(project.currency || 'USD')
   const [status, setStatus] = useState(project.status || 'Active')
-  const [priority, setPriority] = useState(project.priority || 'medium')
+  const [priority, setPriority] = useState((project.priority || 'medium').toLowerCase())
   const [startDate, setStartDate] = useState(formatDateForInput(project.start_date))
   const [deadline, setDeadline] = useState(formatDateForInput(project.deadline))
   const [assignedTo, setAssignedTo] = useState(project.assigned_to || '')
@@ -63,7 +63,7 @@ export function EditProjectModal({
       setAmount(project.amount ? project.amount.toString() : '')
       setCurrency(project.currency || 'USD')
       setStatus(project.status || 'Active')
-      setPriority(project.priority || 'medium')
+      setPriority((project.priority || 'medium').toLowerCase())
       setStartDate(formatDateForInput(project.start_date))
       setDeadline(formatDateForInput(project.deadline))
       setAssignedTo(project.assigned_to || '')
@@ -113,7 +113,7 @@ export function EditProjectModal({
     formData.append('amount', amount)
     formData.append('currency', currency)
     formData.append('status', status)
-    formData.append('priority', priority)
+    formData.append('priority', priority.toLowerCase())
     formData.append('start_date', startDate)
     formData.append('deadline', deadline)
     formData.append('assigned_to', assignedTo)
@@ -127,7 +127,7 @@ export function EditProjectModal({
       setError(res.error)
     } else {
       onClose()
-      if (onSuccess) onSuccess()
+      if (onSuccess) onSuccess(res.project)
     }
   }
 
@@ -310,8 +310,8 @@ export function EditProjectModal({
             <div>
               <label className="block text-muted-foreground font-semibold mb-1">Priority</label>
               <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
+                value={priority.toLowerCase()}
+                onChange={(e) => setPriority(e.target.value.toLowerCase())}
                 className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-foreground focus:border-primary focus:outline-none capitalize"
               >
                 <option value="low">Low</option>

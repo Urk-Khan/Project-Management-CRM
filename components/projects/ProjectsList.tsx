@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -34,6 +34,10 @@ interface ProjectsListProps {
 export function ProjectsList({ initialProjects, clientsList, membersList, templatesList = [] }: ProjectsListProps) {
   const router = useRouter()
   const [projects, setProjects] = useState<ProjectRecord[]>(initialProjects || [])
+
+  useEffect(() => {
+    setProjects(initialProjects || [])
+  }, [initialProjects])
   const [filters, setFilters] = useState<ProjectFiltersState>({
     search: '',
     status: 'ALL',
@@ -383,7 +387,24 @@ export function ProjectsList({ initialProjects, clientsList, membersList, templa
         <EditProjectModal
           isOpen={!!editingProject}
           onClose={() => setEditingProject(null)}
-          onSuccess={() => {
+          onSuccess={(updatedProject) => {
+            if (updatedProject) {
+              setProjects((prev) =>
+                prev.map((p) =>
+                  p.id === updatedProject.id
+                    ? {
+                        ...p,
+                        ...updatedProject,
+                        client_name: p.client_name,
+                        client_company: p.client_company,
+                        assigned_name:
+                          membersList.find((m) => m.id === updatedProject.assigned_to)?.name ||
+                          p.assigned_name,
+                      }
+                    : p
+                )
+              )
+            }
             setEditingProject(null)
             router.refresh()
           }}

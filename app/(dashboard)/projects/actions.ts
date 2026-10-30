@@ -340,10 +340,15 @@ export async function updateProjectAction(projectId: string, formData: FormData)
     const title = formData.get('title')?.toString().trim()
     const description = formData.get('description')?.toString().trim() || null
     const type = formData.get('type')?.toString().trim() || null
-    const amount = parseFloat(formData.get('amount')?.toString() || '0')
+    const amountRaw = formData.get('amount')?.toString().trim()
+    const amountParsed = amountRaw ? parseFloat(amountRaw) : 0
+    const amount = isNaN(amountParsed) ? 0 : amountParsed
     const currency = formData.get('currency')?.toString().trim() || 'USD'
     const status = formData.get('status')?.toString().trim() || 'Active'
-    const priority = formData.get('priority')?.toString().trim() || 'medium'
+    const rawPriority = formData.get('priority')?.toString().trim() || 'medium'
+    const priority = ['low', 'medium', 'high', 'urgent'].includes(rawPriority.toLowerCase())
+      ? rawPriority.toLowerCase()
+      : 'medium'
     const start_date = formatDateToYYYYMMDD(formData.get('start_date'))
     const deadline = formatDateToYYYYMMDD(formData.get('deadline'))
     const assigned_to = formData.get('assigned_to')?.toString().trim() || null
@@ -353,28 +358,15 @@ export async function updateProjectAction(projectId: string, formData: FormData)
       return { error: 'Project title is required.' }
     }
 
-    const updatePayload = {
-      title,
-      description,
-      type,
-      amount,
-      currency,
-      status,
-      priority,
-      start_date,
-      deadline,
-      assigned_to: assigned_to || null,
-      notes,
-      updated_at: new Date().toISOString(),
-    }
-
+    let updateRes: any = null
     try {
-      await query(
+      updateRes = await query(
         `UPDATE projects
          SET title = $1, description = $2, type = $3, amount = $4, currency = $5,
              status = $6, priority = $7, start_date = $8, deadline = $9,
              assigned_to = $10, notes = $11, updated_at = NOW()
-         WHERE id = $12 AND organization_id = $13`,
+         WHERE id = $12 AND organization_id = $13
+         RETURNING *`,
         [
           title,
           description,
@@ -391,9 +383,60 @@ export async function updateProjectAction(projectId: string, formData: FormData)
           session.organization.id,
         ]
       )
+
+      // Fallback: If caller is super admin, allow updating by id alone if tenant org didn't match
+      if ((updateRes?.rowCount ?? 0) === 0 && session.isSuperAdmin) {
+        updateRes = await query(
+          `UPDATE projects
+           SET title = $1, description = $2, type = $3, amount = $4, currency = $5,
+               status = $6, priority = $7, start_date = $8, deadline = $9,
+               assigned_to = $10, notes = $11, updated_at = NOW()
+           WHERE id = $12
+           RETURNING *`,
+          [
+            title,
+            description,
+            type,
+            amount,
+            currency,
+            status,
+            priority,
+            start_date,
+            deadline,
+            assigned_to || null,
+            notes,
+            projectId,
+          ]
+        )
+      }
+
+      if ((updateRes?.rowCount ?? 0) === 0) {
+        return { error: 'Project not found or you do not have permission to edit it.' }
+      }
     } catch (err: any) {
       console.error('Failed to update project:', err)
       return { error: err?.message || 'Database error occurred while updating project.' }
+    }
+
+    const updatedRow = updateRes.rows[0]
+    const updatedProject: ProjectRecord = {
+      id: updatedRow.id,
+      organization_id: updatedRow.organization_id,
+      client_id: updatedRow.client_id,
+      title: updatedRow.title,
+      description: updatedRow.description,
+      type: updatedRow.type,
+      brief_source: updatedRow.brief_source,
+      amount: parseFloat(updatedRow.amount || '0'),
+      currency: updatedRow.currency || 'USD',
+      status: updatedRow.status || 'Active',
+      priority: updatedRow.priority || 'medium',
+      start_date: formatDateToYYYYMMDD(updatedRow.start_date),
+      deadline: formatDateToYYYYMMDD(updatedRow.deadline),
+      assigned_to: updatedRow.assigned_to,
+      notes: updatedRow.notes,
+      created_at: updatedRow.created_at,
+      updated_at: updatedRow.updated_at,
     }
 
     try {
@@ -407,7 +450,9 @@ export async function updateProjectAction(projectId: string, formData: FormData)
     } catch (e) {}
 
     revalidatePath('/projects')
-    return { success: true }
+    revalidatePath('/projects/kanban')
+    revalidatePath(`/projects/${projectId}`)
+    return { success: true, project: updatedProject }
   } catch (error: any) {
     if (error.message === 'UNAUTHENTICATED' || error.message === 'INSUFFICIENT_ROLE' || error.message === 'NOT_FOUND') {
       throw error
