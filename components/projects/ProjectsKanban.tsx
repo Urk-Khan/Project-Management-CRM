@@ -146,12 +146,23 @@ export function ProjectsKanban({ initialProjects, clientsList, membersList }: Pr
       if (!matchTitle && !matchDesc && !matchClient) return false
     }
 
-    if (selectedClient !== 'ALL' && project.client_id !== selectedClient) {
+    if (
+      selectedClient !== 'ALL' &&
+      project.client_id !== selectedClient &&
+      project.client_name?.toLowerCase() !== selectedClient.toLowerCase()
+    ) {
       return false
     }
 
-    if (selectedMember !== 'ALL' && project.assigned_to !== selectedMember) {
-      return false
+    if (selectedMember !== 'ALL') {
+      if (selectedMember === 'UNASSIGNED') {
+        if (project.assigned_to) return false
+      } else if (
+        project.assigned_to !== selectedMember &&
+        project.assigned_name?.toLowerCase() !== selectedMember.toLowerCase()
+      ) {
+        return false
+      }
     }
 
     return true
@@ -335,6 +346,7 @@ export function ProjectsKanban({ initialProjects, clientsList, membersList }: Pr
               className="w-full px-3 py-1.5 bg-background border border-border rounded-lg text-sm text-foreground focus:outline-hidden focus:ring-2 focus:ring-primary"
             >
               <option value="ALL">All Team Members</option>
+              <option value="UNASSIGNED">Unassigned</option>
               {membersList.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name}

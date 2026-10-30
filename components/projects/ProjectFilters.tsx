@@ -40,9 +40,12 @@ export function ProjectFilters({
 }: ProjectFiltersProps) {
   const [isMobileExpanded, setIsMobileExpanded] = useState(false)
 
-  const activeCount = [filters.status, filters.client, filters.assigned, filters.search ? 's' : ''].filter(
-    Boolean
-  ).length
+  const isStatusActive = Boolean(filters.status && filters.status !== 'ALL')
+  const isClientActive = Boolean(filters.client && filters.client !== 'ALL')
+  const isAssignedActive = Boolean(filters.assigned && filters.assigned !== 'ALL')
+  const isSearchActive = Boolean(filters.search && filters.search.trim())
+
+  const activeCount = [isStatusActive, isClientActive, isAssignedActive, isSearchActive].filter(Boolean).length
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4 backdrop-blur-md space-y-3 shadow-xs">
@@ -102,11 +105,11 @@ export function ProjectFilters({
             Status
           </label>
           <select
-            value={filters.status}
+            value={filters.status || 'ALL'}
             onChange={(e) => onChange({ ...filters, status: e.target.value })}
             className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
           >
-            <option value="">All Statuses</option>
+            <option value="ALL">All Statuses</option>
             {PROJECT_STATUS_OPTIONS.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
@@ -121,13 +124,13 @@ export function ProjectFilters({
             Client
           </label>
           <select
-            value={filters.client}
+            value={filters.client || 'ALL'}
             onChange={(e) => onChange({ ...filters, client: e.target.value })}
             className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
           >
-            <option value="">All Clients</option>
+            <option value="ALL">All Clients</option>
             {clientsList.map((c) => (
-              <option key={c.id} value={c.name}>
+              <option key={c.id} value={c.id}>
                 {c.name}
               </option>
             ))}
@@ -140,13 +143,14 @@ export function ProjectFilters({
             Assigned Member
           </label>
           <select
-            value={filters.assigned}
+            value={filters.assigned || 'ALL'}
             onChange={(e) => onChange({ ...filters, assigned: e.target.value })}
             className="w-full rounded-xl border border-border bg-background px-3 py-2 text-xs text-foreground focus:border-primary focus:outline-none"
           >
-            <option value="">All Assignees</option>
+            <option value="ALL">All Assignees</option>
+            <option value="UNASSIGNED">Unassigned</option>
             {membersList.map((m) => (
-              <option key={m.id} value={m.name}>
+              <option key={m.id} value={m.id}>
                 {m.name}
               </option>
             ))}

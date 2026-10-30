@@ -31,6 +31,54 @@ interface ProjectsListProps {
   templatesList?: { id: string; name: string; type?: string | null; default_amount?: number; description?: string | null }[]
 }
 
+function matchesStatus(projectStatus: string, filterStatus: string): boolean {
+  if (!filterStatus || filterStatus === 'ALL') return true
+  const pNorm = (projectStatus || '').toLowerCase().replace(/_/g, ' ').trim()
+  const fNorm = filterStatus.toLowerCase().replace(/_/g, ' ').trim()
+
+  if (pNorm === fNorm) return true
+
+  if (fNorm === 'planning') {
+    return pNorm === 'planning' || pNorm === 'brief received'
+  }
+  if (fNorm === 'active') {
+    return pNorm === 'active' || pNorm === 'in progress'
+  }
+  if (fNorm === 'in review') {
+    return pNorm === 'in review' || pNorm === 'review'
+  }
+  if (fNorm === 'completed') {
+    return pNorm === 'completed' || pNorm === 'delivered' || pNorm === 'paid' || pNorm === 'invoiced'
+  }
+  if (fNorm === 'on hold') {
+    return pNorm === 'on hold'
+  }
+  if (fNorm === 'archived') {
+    return pNorm === 'archived'
+  }
+
+  return false
+}
+
+function matchesClient(project: ProjectRecord, filterClient: string): boolean {
+  if (!filterClient || filterClient === 'ALL') return true
+  return (
+    project.client_id === filterClient ||
+    project.client_name?.toLowerCase() === filterClient.toLowerCase()
+  )
+}
+
+function matchesAssigned(project: ProjectRecord, filterAssigned: string): boolean {
+  if (!filterAssigned || filterAssigned === 'ALL') return true
+  if (filterAssigned === 'UNASSIGNED') {
+    return !project.assigned_to
+  }
+  return (
+    project.assigned_to === filterAssigned ||
+    project.assigned_name?.toLowerCase() === filterAssigned.toLowerCase()
+  )
+}
+
 export function ProjectsList({ initialProjects, clientsList, membersList, templatesList = [] }: ProjectsListProps) {
   const router = useRouter()
   const [projects, setProjects] = useState<ProjectRecord[]>(initialProjects || [])
@@ -59,25 +107,27 @@ export function ProjectsList({ initialProjects, clientsList, membersList, templa
   const filteredProjects = projects.filter((project) => {
     // Search match
     if (filters.search) {
-      const q = filters.search.toLowerCase()
+      const q = filters.search.toLowerCase().trim()
       const matchTitle = project.title.toLowerCase().includes(q)
       const matchDesc = project.description?.toLowerCase().includes(q) ?? false
       const matchClient = project.client_name?.toLowerCase().includes(q) ?? false
-      if (!matchTitle && !matchDesc && !matchClient) return false
+      const matchAssigned = project.assigned_name?.toLowerCase().includes(q) ?? false
+      const matchType = project.type?.toLowerCase().includes(q) ?? false
+      if (!matchTitle && !matchDesc && !matchClient && !matchAssigned && !matchType) return false
     }
 
     // Status filter
-    if (filters.status !== 'ALL' && project.status !== filters.status) {
+    if (!matchesStatus(project.status, filters.status)) {
       return false
     }
 
     // Client filter
-    if (filters.client !== 'ALL' && project.client_id !== filters.client) {
+    if (!matchesClient(project, filters.client)) {
       return false
     }
 
     // Assigned filter
-    if (filters.assigned !== 'ALL' && project.assigned_to !== filters.assigned) {
+    if (!matchesAssigned(project, filters.assigned)) {
       return false
     }
 
