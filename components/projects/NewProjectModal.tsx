@@ -298,7 +298,7 @@ export function NewProjectModal({
                       (t) => t.toLowerCase() === type.trim().toLowerCase()
                     ) && (
                       <div className="px-3 py-1.5 text-[11px] text-muted-foreground border-t border-border/50 mt-1">
-                        New type: <span className="font-semibold text-foreground">"{type}"</span>
+                        New type: <span className="font-semibold text-foreground">&quot;{type}&quot;</span>
                       </div>
                     )}
                 </div>
