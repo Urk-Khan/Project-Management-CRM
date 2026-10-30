@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -33,13 +33,18 @@ interface ProjectsListProps {
 
 export function ProjectsList({ initialProjects, clientsList, membersList, templatesList = [] }: ProjectsListProps) {
   const router = useRouter()
-  const [projects, setProjects] = useState<ProjectRecord[]>(initialProjects)
+  const [projects, setProjects] = useState<ProjectRecord[]>(initialProjects || [])
   const [filters, setFilters] = useState<ProjectFiltersState>({
     search: '',
     status: 'ALL',
     client: 'ALL',
     assigned: 'ALL'
   })
+
+  const existingTypes = useMemo(() => {
+    if (!Array.isArray(projects)) return []
+    return Array.from(new Set(projects.map((p) => p.type?.trim()).filter(Boolean))) as string[]
+  }, [projects])
 
   const [isNewModalOpen, setIsNewModalOpen] = useState(false)
   const [editingProject, setEditingProject] = useState<ProjectRecord | null>(null)
@@ -370,7 +375,7 @@ export function ProjectsList({ initialProjects, clientsList, membersList, templa
           clientsList={clientsList}
           membersList={membersList}
           templatesList={templatesList}
-          existingTypes={Array.from(new Set(projects.map((p) => p.type?.trim()).filter(Boolean))) as string[]}
+          existingTypes={existingTypes}
         />
       )}
 

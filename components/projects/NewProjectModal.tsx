@@ -50,17 +50,21 @@ export function NewProjectModal({
     if (isOpen) {
       setType('')
       setIsTypeDropdownOpen(false)
-      if (existingTypes.length > 0) {
+      if (existingTypes && existingTypes.length > 0) {
         setAvailableTypes(existingTypes)
       } else {
-        fetchExistingProjectTypesAction().then((types) => {
-          if (types && types.length > 0) {
-            setAvailableTypes(types)
-          }
-        })
+        fetchExistingProjectTypesAction()
+          .then((types) => {
+            if (types && Array.isArray(types) && types.length > 0) {
+              setAvailableTypes(types)
+            }
+          })
+          .catch((err) => {
+            console.error('Failed to fetch project types:', err)
+          })
       }
     }
-  }, [isOpen, existingTypes])
+  }, [isOpen])
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {

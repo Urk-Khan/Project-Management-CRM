@@ -27,7 +27,7 @@ export default function OrgDetailsStep({
   setIndustryType,
   onNext,
 }: OrgDetailsStepProps) {
-  const isPredefined = INDUSTRIES.includes(industryType)
+  const isPredefined = Boolean(industryType && INDUSTRIES.includes(industryType))
   const [selectedCategory, setSelectedCategory] = useState<string>(
     isPredefined ? industryType : industryType ? 'Other' : INDUSTRIES[0]
   )

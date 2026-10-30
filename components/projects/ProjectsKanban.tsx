@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -106,7 +106,12 @@ const COLUMNS: ColumnDef[] = [
 
 export function ProjectsKanban({ initialProjects, clientsList, membersList }: ProjectsKanbanProps) {
   const router = useRouter()
-  const [projects, setProjects] = useState<ProjectRecord[]>(initialProjects)
+  const [projects, setProjects] = useState<ProjectRecord[]>(initialProjects || [])
+
+  const existingTypes = useMemo(() => {
+    if (!Array.isArray(projects)) return []
+    return Array.from(new Set(projects.map((p) => p.type?.trim()).filter(Boolean))) as string[]
+  }, [projects])
 
   // Filters
   const [search, setSearch] = useState('')
@@ -531,7 +536,7 @@ export function ProjectsKanban({ initialProjects, clientsList, membersList }: Pr
           clientsList={clientsList}
           membersList={membersList}
           initialClientId={newModalInitialClient}
-          existingTypes={Array.from(new Set(projects.map((p) => p.type?.trim()).filter(Boolean))) as string[]}
+          existingTypes={existingTypes}
         />
       )}
 
