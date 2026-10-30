@@ -143,9 +143,38 @@ export async function createGlobalTaskAction(formData: FormData) {
       })
     } catch (e) {}
 
+    const newTask = await queryOne<any>(
+      `SELECT t.*, p.title AS project_title, u.full_name AS assigned_name, u.email AS assigned_email
+       FROM tasks t
+       LEFT JOIN projects p ON p.id = t.project_id
+       LEFT JOIN users u ON u.id = t.assigned_to
+       WHERE t.id = $1`,
+      [data.id]
+    )
+
     revalidatePath('/tasks')
     revalidatePath(`/projects/${project_id}`)
-    return { success: true, taskId: data.id }
+
+    const taskRecord: GlobalTaskRecord | undefined = newTask
+      ? {
+          id: newTask.id,
+          organization_id: newTask.organization_id,
+          project_id: newTask.project_id,
+          project_title: newTask.project_title || 'Agency Project',
+          title: newTask.title,
+          description: newTask.description,
+          assigned_to: newTask.assigned_to,
+          assigned_name: newTask.assigned_name || newTask.assigned_email || null,
+          status: newTask.status,
+          priority: newTask.priority,
+          due_date: newTask.due_date,
+          completed_at: newTask.completed_at,
+          created_at: newTask.created_at,
+          updated_at: newTask.updated_at
+        }
+      : undefined
+
+    return { success: true, taskId: data.id, task: taskRecord }
   } catch (err: any) {
     if (err.message === 'UNAUTHENTICATED' || err.message === 'INSUFFICIENT_ROLE' || err.message === 'NOT_FOUND') {
       throw err
@@ -202,8 +231,37 @@ export async function updateGlobalTaskAction(taskId: string, formData: FormData)
       })
     } catch (e) {}
 
+    const updated = await queryOne<any>(
+      `SELECT t.*, p.title AS project_title, u.full_name AS assigned_name, u.email AS assigned_email
+       FROM tasks t
+       LEFT JOIN projects p ON p.id = t.project_id
+       LEFT JOIN users u ON u.id = t.assigned_to
+       WHERE t.id = $1`,
+      [taskId]
+    )
+
     revalidatePath('/tasks')
-    return { success: true }
+
+    const taskRecord: GlobalTaskRecord | undefined = updated
+      ? {
+          id: updated.id,
+          organization_id: updated.organization_id,
+          project_id: updated.project_id,
+          project_title: updated.project_title || 'Agency Project',
+          title: updated.title,
+          description: updated.description,
+          assigned_to: updated.assigned_to,
+          assigned_name: updated.assigned_name || updated.assigned_email || null,
+          status: updated.status,
+          priority: updated.priority,
+          due_date: updated.due_date,
+          completed_at: updated.completed_at,
+          created_at: updated.created_at,
+          updated_at: updated.updated_at
+        }
+      : undefined
+
+    return { success: true, task: taskRecord }
   } catch (err: any) {
     if (err.message === 'UNAUTHENTICATED' || err.message === 'INSUFFICIENT_ROLE' || err.message === 'NOT_FOUND') {
       throw err

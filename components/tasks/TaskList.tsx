@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import {
@@ -48,6 +48,10 @@ export function TaskList({
   const router = useRouter()
   const [tasks, setTasks] = useState<GlobalTaskRecord[]>(initialTasks)
   const [viewMode, setViewMode] = useState<'all' | 'my' | 'workload'>('all')
+
+  useEffect(() => {
+    setTasks(initialTasks)
+  }, [initialTasks])
 
   // Filters for Tasks List View
   const [search, setSearch] = useState('')
@@ -580,8 +584,11 @@ export function TaskList({
         <NewTaskModal
           isOpen={isNewModalOpen}
           onClose={() => setIsNewModalOpen(false)}
-          onSuccess={() => {
+          onSuccess={(createdTask) => {
             setIsNewModalOpen(false)
+            if (createdTask) {
+              setTasks((prev) => [createdTask, ...prev.filter((t) => t.id !== createdTask.id)])
+            }
             router.refresh()
           }}
           projectsList={projectsList}
@@ -594,8 +601,11 @@ export function TaskList({
         <EditTaskModal
           isOpen={!!editingTask}
           onClose={() => setEditingTask(null)}
-          onSuccess={() => {
+          onSuccess={(updatedTask) => {
             setEditingTask(null)
+            if (updatedTask) {
+              setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)))
+            }
             router.refresh()
           }}
           task={editingTask}

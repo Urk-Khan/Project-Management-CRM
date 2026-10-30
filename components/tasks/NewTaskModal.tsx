@@ -2,12 +2,12 @@
 
 import { useState } from 'react'
 import { CheckSquare, X, Loader2, Calendar, User, Briefcase, AlertCircle } from 'lucide-react'
-import { createGlobalTaskAction } from '@/app/(dashboard)/tasks/actions'
+import { createGlobalTaskAction, GlobalTaskRecord } from '@/app/(dashboard)/tasks/actions'
 
 interface NewTaskModalProps {
   isOpen: boolean
   onClose: () => void
-  onSuccess?: () => void
+  onSuccess?: (createdTask?: GlobalTaskRecord) => void
   projectsList: { id: string; title: string }[]
   membersList: { id: string; name: string }[]
   currentUserId?: string
@@ -59,7 +59,7 @@ export function NewTaskModal({
       const res = await createGlobalTaskAction(formData)
       if (res.success) {
         onClose()
-        if (onSuccess) onSuccess()
+        if (onSuccess) onSuccess(res.task)
       } else {
         setErrorMsg(res.error || 'Failed to create task')
       }

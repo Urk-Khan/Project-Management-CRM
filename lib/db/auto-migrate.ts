@@ -58,7 +58,32 @@ export async function ensureAutoMigrated(): Promise<{ status: string; appliedCou
         INSERT INTO public.platform_settings (key, value) VALUES
           ('global_feature_flags', '{"ai_kill_switch": false, "ai_reply_suggestions": true, "ai_lead_scoring": true, "ai_task_extraction": true, "ai_report_narratives": true}'),
           ('global_onboarding_defaults', '{"default_plan_tier": "starter", "trial_days": 14}')
-        ON CONFLICT (key) DO NOTHING;
+                ON CONFLICT (key) DO NOTHING;
+
+        -- Fix foreign keys for tasks and projects assigned_to pointing to public.users(id)
+        DO $$
+        BEGIN
+          IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'tasks_assigned_to_fkey') THEN
+            ALTER TABLE public.tasks DROP CONSTRAINT tasks_assigned_to_fkey;
+          END IF;
+          IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'tasks') THEN
+            ALTER TABLE public.tasks ADD CONSTRAINT tasks_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+          END IF;
+
+          IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE constraint_name = 'projects_assigned_to_fkey') THEN
+            ALTER TABLE public.projects DROP CONSTRAINT projects_assigned_to_fkey;
+          END IF;
+          IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'projects') THEN
+            ALTER TABLE public.projects ADD CONSTRAINT projects_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.users(id) ON DELETE SET NULL;
+          END IF;
+
+          -- Backfill profiles from users
+          IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'profiles') THEN
+            INSERT INTO public.profiles (id, email, full_name)
+            SELECT id, email, full_name FROM public.users
+            ON CONFLICT (id) DO NOTHING;
+          END IF;
+        END $$;
       `);
 
       // 1. Create _schema_migrations if not exists

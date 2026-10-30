@@ -8,7 +8,7 @@ interface EditTaskModalProps {
   task: GlobalTaskRecord
   isOpen: boolean
   onClose: () => void
-  onSuccess?: () => void
+  onSuccess?: (updatedTask?: GlobalTaskRecord) => void
   membersList: { id: string; name: string }[]
 }
 
@@ -51,7 +51,7 @@ export function EditTaskModal({
       const res = await updateGlobalTaskAction(task.id, formData)
       if (res.success) {
         onClose()
-        if (onSuccess) onSuccess()
+        if (onSuccess) onSuccess(res.task)
       } else {
         setErrorMsg(res.error || 'Failed to update task')
       }
