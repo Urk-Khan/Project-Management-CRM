@@ -235,7 +235,7 @@ export function NewProjectModal({
               <div className="relative">
                 <input
                   type="text"
-                  list="project-type-suggestions"
+                  autoComplete="off"
                   value={type}
                   onChange={(e) => {
                     setType(e.target.value)
@@ -265,16 +265,10 @@ export function NewProjectModal({
                     />
                   </button>
                 )}
-
-                <datalist id="project-type-suggestions">
-                  {availableTypes.map((t) => (
-                    <option key={t} value={t} />
-                  ))}
-                </datalist>
               </div>
 
               {isTypeDropdownOpen && availableTypes.length > 0 && (
-                <div className="absolute left-0 right-0 top-full mt-1.5 z-30 max-h-48 overflow-y-auto rounded-xl border border-border bg-card p-1 shadow-2xl backdrop-blur-md">
+                <div className="absolute left-0 right-0 top-full mt-1.5 z-50 max-h-48 overflow-y-auto rounded-xl border border-border bg-card p-1 shadow-2xl backdrop-blur-md">
                   {availableTypes
                     .filter((t) => !type || t.toLowerCase().includes(type.toLowerCase()))
                     .map((t) => (
