@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClientAction } from '@/app/(dashboard)/clients/actions'
 import { TagSelect } from './TagSelect'
-import { CountrySelect } from './CountrySelect'
+import { CountrySelect, getCurrencyForCountry } from './CountrySelect'
 import { Pencil, Zap, ArrowLeft, Loader2, AlertCircle, CheckCircle2, Tag as TagIcon } from 'lucide-react'
 
 export interface ClientFormValues {
@@ -348,7 +348,12 @@ export function ClientForm({
               name="country"
               value={formData.country}
               onChange={(val) => {
-                setFormData((prev) => ({ ...prev, country: val }))
+                const autoCur = getCurrencyForCountry(val)
+                setFormData((prev) => ({
+                  ...prev,
+                  country: val,
+                  ...(autoCur ? { currency: autoCur } : {}),
+                }))
                 if (errors.country) {
                   setErrors((prev) => ({ ...prev, country: undefined }))
                 }

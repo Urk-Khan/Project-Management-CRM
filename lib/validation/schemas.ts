@@ -32,7 +32,9 @@ export const PhoneSchema = z
   .nullable()
 
 export const CurrencySchema = z
-  .enum(['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'SGD'])
+  .string()
+  .trim()
+  .max(10, 'Currency cannot exceed 10 characters')
   .default('USD')
 
 export const UrlSchema = z

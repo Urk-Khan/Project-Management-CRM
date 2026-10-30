@@ -20,7 +20,7 @@ import {
 } from 'lucide-react'
 
 import { TagSelect } from '@/components/clients/TagSelect'
-import { CountrySelect } from '@/components/clients/CountrySelect'
+import { CountrySelect, getCurrencyForCountry } from '@/components/clients/CountrySelect'
 
 interface ClientEditModalProps {
   client: ClientRecord
@@ -37,6 +37,7 @@ export function ClientEditModal({ client, isOpen, onClose }: ClientEditModalProp
   )
   const [tags, setTags] = useState<string[]>(client.tags || [])
   const [country, setCountry] = useState(client.country || '')
+  const [currency, setCurrency] = useState(client.currency || 'USD')
 
   if (!isOpen) return null
 
@@ -231,31 +232,27 @@ export function ClientEditModal({ client, isOpen, onClose }: ClientEditModalProp
                 <CountrySelect
                   name="country"
                   value={country}
-                  onChange={setCountry}
+                  onChange={(val) => {
+                    setCountry(val)
+                    const autoCur = getCurrencyForCountry(val)
+                    if (autoCur) {
+                      setCurrency(autoCur)
+                    }
+                  }}
                   placeholder="e.g. United States"
                 />
               </div>
 
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Currency</label>
-                <select
+                <input
+                  type="text"
                   name="currency"
-                  defaultValue={client.currency || 'USD'}
-                  className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
-                >
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                  <option value="CAD">CAD ($)</option>
-                  <option value="AUD">AUD ($)</option>
-                  <option value="AED">AED (د.إ)</option>
-                  <option value="SAR">SAR (﷼)</option>
-                  <option value="SGD">SGD ($)</option>
-                  {client.currency &&
-                    !['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'SGD'].includes(client.currency) && (
-                      <option value={client.currency}>{client.currency}</option>
-                    )}
-                </select>
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value.toUpperCase())}
+                  placeholder="USD"
+                  className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-sm text-foreground placeholder:text-placeholder focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary uppercase transition"
+                />
               </div>
 
               <div>
