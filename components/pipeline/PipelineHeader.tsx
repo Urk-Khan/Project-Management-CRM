@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Pipeline } from '@/lib/types/pipeline';
 import {
   Kanban,
@@ -36,6 +36,21 @@ export function PipelineHeader({
   totalPipelineValue,
 }: PipelineHeaderProps) {
   const [showDropdown, setShowDropdown] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    }
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showDropdown]);
 
   const formattedTotal = new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -44,10 +59,10 @@ export function PipelineHeader({
   }).format(totalPipelineValue || 0);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 bg-slate-950/80 px-6 py-3.5 backdrop-blur-md">
+    <div className="relative z-30 flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 bg-slate-950/80 px-6 py-3.5 backdrop-blur-md">
       {/* Left: Pipeline Switcher Dropdown */}
       <div className="flex items-center gap-4">
-        <div className="relative">
+        <div ref={dropdownRef} className="relative z-50">
           <button
             onClick={() => setShowDropdown(!showDropdown)}
             className="flex items-center gap-2.5 rounded-xl border border-slate-800 bg-slate-900/90 px-3.5 py-2 text-sm font-bold text-white hover:border-slate-700 hover:bg-slate-800 transition"
@@ -60,7 +75,7 @@ export function PipelineHeader({
           </button>
 
           {showDropdown && (
-            <div className="absolute left-0 top-full mt-2 w-64 rounded-2xl border border-slate-800 bg-slate-900 p-2 shadow-2xl z-40 space-y-1">
+            <div className="absolute left-0 top-full mt-2 w-64 rounded-2xl border border-slate-700/80 bg-slate-900/95 p-2 shadow-2xl z-50 space-y-1 backdrop-blur-xl">
               <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 Select Pipeline
               </div>

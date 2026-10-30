@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { DealFilters, PipelineLabel } from '@/lib/types/pipeline';
 import {
   Search,
@@ -32,6 +32,21 @@ export function PipelineFilterBar({
   searchQuery,
 }: PipelineFilterBarProps) {
   const [showFilterPopover, setShowFilterPopover] = useState(false);
+  const filterPopoverRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (filterPopoverRef.current && !filterPopoverRef.current.contains(event.target as Node)) {
+        setShowFilterPopover(false);
+      }
+    }
+    if (showFilterPopover) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showFilterPopover]);
 
   const isMyDealsActive = filters.ownerId === currentUserId;
 
@@ -61,7 +76,7 @@ export function PipelineFilterBar({
     filters.closeAfter;
 
   return (
-    <div className="flex flex-col gap-2.5 px-4 py-2 border-b border-slate-800/80 bg-slate-950/40">
+    <div className="relative z-20 flex flex-col gap-2.5 px-4 py-2 border-b border-slate-800/80 bg-slate-950/40">
       <div className="flex flex-wrap items-center justify-between gap-3">
         {/* Search Input */}
         <div className="relative flex-1 min-w-[220px] max-w-md">
@@ -101,7 +116,7 @@ export function PipelineFilterBar({
           )}
 
           {/* Filter Popover Button */}
-          <div className="relative">
+          <div ref={filterPopoverRef} className="relative z-40">
             <button
               onClick={() => setShowFilterPopover(!showFilterPopover)}
               className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition ${
@@ -117,7 +132,7 @@ export function PipelineFilterBar({
 
             {/* Filter Popover Content */}
             {showFilterPopover && (
-              <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-slate-800 bg-slate-900 p-4 shadow-2xl z-30 space-y-3">
+              <div className="absolute right-0 top-full mt-2 w-72 rounded-2xl border border-slate-700/80 bg-slate-900/95 p-4 shadow-2xl z-40 space-y-3 backdrop-blur-xl">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-800">
                   <span className="text-xs font-bold text-white">Filter Deals</span>
                   <button

@@ -517,7 +517,7 @@ export function PipelinePageClient({
       )}
 
       {/* Main View Area */}
-      <div className="flex-1 overflow-hidden relative">
+      <div className="flex-1 overflow-hidden relative z-0">
         {loading && boardData.length === 0 ? (
           <div className="flex h-full w-full items-center justify-center">
             <Loader2 className="h-8 w-8 animate-spin text-sky-500" />
