@@ -25,6 +25,8 @@ import {
 
 import { TagBadge } from './TagBadge'
 import { TagManagerModal } from './TagManagerModal'
+import { fetchTagsAction } from '@/app/(dashboard)/clients/tags/actions'
+import { useEffect } from 'react'
 import { ClientEditModal } from './ClientEditModal'
 import { Tag as TagIcon } from 'lucide-react'
 
@@ -51,15 +53,35 @@ export interface ClientsListProps {
   initialClients: ClientRecord[]
   userRole?: string | null
   isSuperAdmin?: boolean
+  organizationTags?: string[]
 }
 
-export function ClientsList({ initialClients, userRole, isSuperAdmin }: ClientsListProps) {
+export function ClientsList({
+  initialClients,
+  userRole,
+  isSuperAdmin,
+  organizationTags = [],
+}: ClientsListProps) {
   const router = useRouter()
 
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
   const [deletingId, setDeletingId] = useState<string | null>(null)
   const [editingClient, setEditingClient] = useState<ClientRecord | null>(null)
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false)
+  const [dbTags, setDbTags] = useState<string[]>(organizationTags)
+
+  useEffect(() => {
+    if (organizationTags && organizationTags.length > 0) {
+      setDbTags(organizationTags)
+    }
+    fetchTagsAction()
+      .then((tags) => {
+        if (tags && Array.isArray(tags)) {
+          setDbTags(tags.map((t) => t.name))
+        }
+      })
+      .catch(() => {})
+  }, [organizationTags])
 
   const [filters, setFilters] = useState<ClientFiltersState>({
     search: '',
@@ -81,13 +103,20 @@ export function ClientsList({ initialClients, userRole, isSuperAdmin }: ClientsL
 
   const tagsList = useMemo(() => {
     const set = new Set<string>()
+    // 1. Add all organization tags created in Manage Tags
+    dbTags.forEach((t) => {
+      if (t && typeof t === 'string' && t.trim()) set.add(t.trim())
+    })
+    // 2. Add all client assigned tags
     initialClients.forEach((c) => {
       if (c.tags && Array.isArray(c.tags)) {
-        c.tags.forEach((t) => set.add(t))
+        c.tags.forEach((t) => {
+          if (t && typeof t === 'string' && t.trim()) set.add(t.trim())
+        })
       }
     })
-    return Array.from(set).sort()
-  }, [initialClients])
+    return Array.from(set).sort((a, b) => a.localeCompare(b))
+  }, [dbTags, initialClients])
 
   // Filter clients client-side
   const filteredClients = useMemo(() => {
@@ -524,8 +553,23 @@ export function ClientsList({ initialClients, userRole, isSuperAdmin }: ClientsL
       {/* Tag Manager Modal */}
       <TagManagerModal
         isOpen={isTagManagerOpen}
-        onClose={() => setIsTagManagerOpen(false)}
-        onTagsUpdated={() => router.refresh()}
+        onClose={() => {
+          setIsTagManagerOpen(false)
+          fetchTagsAction().then((tags) => {
+            if (tags && Array.isArray(tags)) {
+              setDbTags(tags.map((t) => t.name))
+            }
+          }).catch(() => {})
+          router.refresh()
+        }}
+        onTagsUpdated={() => {
+          fetchTagsAction().then((tags) => {
+            if (tags && Array.isArray(tags)) {
+              setDbTags(tags.map((t) => t.name))
+            }
+          }).catch(() => {})
+          router.refresh()
+        }}
       />
     </div>
   )
