@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 
 import { TagSelect } from '@/components/clients/TagSelect'
+import { CountrySelect } from '@/components/clients/CountrySelect'
 
 interface ClientEditModalProps {
   client: ClientRecord
@@ -35,6 +36,7 @@ export function ClientEditModal({ client, isOpen, onClose }: ClientEditModalProp
     client.communication_mode === 'connected' ? 'connected' : 'manual'
   )
   const [tags, setTags] = useState<string[]>(client.tags || [])
+  const [country, setCountry] = useState(client.country || '')
 
   if (!isOpen) return null
 
@@ -226,11 +228,11 @@ export function ClientEditModal({ client, isOpen, onClose }: ClientEditModalProp
 
               <div>
                 <label className="block text-xs font-medium text-foreground mb-1">Country</label>
-                <input
-                  type="text"
+                <CountrySelect
                   name="country"
-                  defaultValue={client.country || ''}
-                  className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-sm text-foreground placeholder:text-placeholder focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
+                  value={country}
+                  onChange={setCountry}
+                  placeholder="e.g. United States"
                 />
               </div>
 

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClientAction } from '@/app/(dashboard)/clients/actions'
 import { TagSelect } from './TagSelect'
+import { CountrySelect } from './CountrySelect'
 import { Pencil, Zap, ArrowLeft, Loader2, AlertCircle, CheckCircle2, Tag as TagIcon } from 'lucide-react'
 
 export interface ClientFormValues {
@@ -343,13 +344,16 @@ export function ClientForm({
           {/* Country */}
           <div>
             <label className="block text-xs font-medium text-muted-foreground mb-1.5">Country</label>
-            <input
-              type="text"
+            <CountrySelect
               name="country"
               value={formData.country}
-              onChange={handleChange}
+              onChange={(val) => {
+                setFormData((prev) => ({ ...prev, country: val }))
+                if (errors.country) {
+                  setErrors((prev) => ({ ...prev, country: undefined }))
+                }
+              }}
               placeholder="e.g. United States"
-              className="w-full rounded-xl border border-border bg-background px-3.5 py-2.5 text-xs text-foreground placeholder:text-placeholder focus:border-primary focus:outline-none transition"
             />
           </div>
 
