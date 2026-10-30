@@ -213,7 +213,14 @@ export function ClientEditModal({ client, isOpen, onClose }: ClientEditModalProp
                   <option value="Slack">Slack</option>
                   <option value="Email">Email</option>
                   <option value="Telegram">Telegram</option>
+                  <option value="Discord">Discord</option>
+                  <option value="Upwork">Upwork</option>
                   <option value="Portal">Client Portal</option>
+                  <option value="Other">Other</option>
+                  {client.platform &&
+                    !['WhatsApp', 'Slack', 'Email', 'Telegram', 'Discord', 'Upwork', 'Portal', 'Other'].includes(client.platform) && (
+                      <option value={client.platform}>{client.platform}</option>
+                    )}
                 </select>
               </div>
 
@@ -239,6 +246,13 @@ export function ClientEditModal({ client, isOpen, onClose }: ClientEditModalProp
                   <option value="GBP">GBP (£)</option>
                   <option value="CAD">CAD ($)</option>
                   <option value="AUD">AUD ($)</option>
+                  <option value="AED">AED (د.إ)</option>
+                  <option value="SAR">SAR (﷼)</option>
+                  <option value="SGD">SGD ($)</option>
+                  {client.currency &&
+                    !['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'AED', 'SAR', 'SGD'].includes(client.currency) && (
+                      <option value={client.currency}>{client.currency}</option>
+                    )}
                 </select>
               </div>
 
@@ -250,10 +264,18 @@ export function ClientEditModal({ client, isOpen, onClose }: ClientEditModalProp
                   className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="Per Project">Per Project</option>
+                  <option value="Monthly">Monthly</option>
                   <option value="Monthly Retainer">Monthly Retainer</option>
+                  <option value="Weekly">Weekly</option>
+                  <option value="Hourly">Hourly</option>
+                  <option value="Milestone">Milestone</option>
+                  <option value="Milestone Based">Milestone Based</option>
                   <option value="NET30">NET30</option>
                   <option value="NET60">NET60</option>
-                  <option value="Milestone Based">Milestone Based</option>
+                  {client.payment_schedule &&
+                    !['Per Project', 'Monthly', 'Monthly Retainer', 'Weekly', 'Hourly', 'Milestone', 'Milestone Based', 'NET30', 'NET60'].includes(client.payment_schedule) && (
+                      <option value={client.payment_schedule}>{client.payment_schedule}</option>
+                    )}
                 </select>
               </div>
 
@@ -261,13 +283,17 @@ export function ClientEditModal({ client, isOpen, onClose }: ClientEditModalProp
                 <label className="block text-xs font-medium text-foreground mb-1">Status</label>
                 <select
                   name="status"
-                  defaultValue={client.status || 'active'}
+                  defaultValue={client.status?.toLowerCase() || 'active'}
                   className="w-full rounded-xl border border-border bg-background px-3.5 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   <option value="active">Active</option>
-                  <option value="lead">Lead</option>
-                  <option value="churned">Churned</option>
+                  <option value="paused">Paused</option>
+                  <option value="completed">Completed</option>
                   <option value="archived">Archived</option>
+                  {client.status &&
+                    !['active', 'paused', 'completed', 'archived'].includes(client.status.toLowerCase()) && (
+                      <option value={client.status}>{client.status}</option>
+                    )}
                 </select>
               </div>
             </div>

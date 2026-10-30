@@ -57,12 +57,16 @@ export const CreateClientSchema = z.object({
   email: EmailSchema.optional().nullable(),
   phone: PhoneSchema,
   platform: z
-    .enum(['WhatsApp', 'Slack', 'Email', 'Discord', 'Upwork', 'Other'])
+    .string()
+    .trim()
+    .max(50, 'Platform cannot exceed 50 characters')
     .default('WhatsApp'),
   country: z.string().trim().max(100).optional().nullable(),
   currency: CurrencySchema,
   payment_schedule: z
-    .enum(['Per Project', 'Monthly', 'Weekly', 'Milestone', 'Hourly'])
+    .string()
+    .trim()
+    .max(50, 'Payment schedule cannot exceed 50 characters')
     .default('Per Project'),
   communication_mode: z.enum(['manual', 'connected']).default('connected'),
   notes: SafeTextSchema.optional().nullable(),
@@ -70,7 +74,7 @@ export const CreateClientSchema = z.object({
 
 export const UpdateClientSchema = CreateClientSchema.partial().extend({
   id: UUIDSchema.optional(),
-  status: z.enum(['active', 'paused', 'completed', 'archived']).optional(),
+  status: z.enum(['active', 'paused', 'completed', 'archived', 'lead', 'churned']).optional(),
 })
 
 // ==========================================

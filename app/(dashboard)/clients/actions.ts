@@ -203,17 +203,17 @@ export async function updateClientAction(clientId: string, formData: FormData) {
   try {
 
     const rawData = {
-      name: formData.get('name')?.toString(),
-      company: formData.get('company')?.toString() || null,
-      email: formData.get('email')?.toString() || null,
-      phone: formData.get('phone')?.toString() || null,
-      platform: formData.get('platform')?.toString() || 'WhatsApp',
-      country: formData.get('country')?.toString() || null,
-      currency: formData.get('currency')?.toString() || 'USD',
-      payment_schedule: formData.get('payment_schedule')?.toString() || 'Per Project',
-      status: formData.get('status')?.toString() || 'active',
-      communication_mode: formData.get('communication_mode')?.toString() || 'manual',
-      notes: formData.get('notes')?.toString() || null,
+      name: formData.get('name')?.toString()?.trim(),
+      company: formData.get('company')?.toString()?.trim() || null,
+      email: formData.get('email')?.toString()?.trim() || null,
+      phone: formData.get('phone')?.toString()?.trim() || null,
+      platform: formData.get('platform')?.toString()?.trim() || 'WhatsApp',
+      country: formData.get('country')?.toString()?.trim() || null,
+      currency: formData.get('currency')?.toString()?.trim() || 'USD',
+      payment_schedule: formData.get('payment_schedule')?.toString()?.trim() || 'Per Project',
+      status: formData.get('status')?.toString()?.trim() || 'active',
+      communication_mode: formData.get('communication_mode')?.toString()?.trim() || 'manual',
+      notes: formData.get('notes')?.toString()?.trim() || null,
     }
 
     const validation = validateAndSanitize(UpdateClientSchema, rawData)
@@ -242,15 +242,16 @@ export async function updateClientAction(clientId: string, formData: FormData) {
       }
     } catch (e) {}
 
-    let updateError: any = null
+    let updateRes: any = null
     try {
       if (tags !== undefined) {
-        await query(
+        updateRes = await query(
           `UPDATE clients
            SET name = $1, company = $2, email = $3, phone = $4, platform = $5,
                country = $6, currency = $7, payment_schedule = $8, status = $9,
                communication_mode = $10, notes = $11, tags = $12, updated_at = NOW()
-           WHERE id = $13 AND organization_id = $14`,
+           WHERE id = $13 AND organization_id = $14
+           RETURNING id`,
           [
             validatedData.name,
             validatedData.company,
@@ -269,12 +270,13 @@ export async function updateClientAction(clientId: string, formData: FormData) {
           ]
         )
       } else {
-        await query(
+        updateRes = await query(
           `UPDATE clients
            SET name = $1, company = $2, email = $3, phone = $4, platform = $5,
                country = $6, currency = $7, payment_schedule = $8, status = $9,
                communication_mode = $10, notes = $11, updated_at = NOW()
-           WHERE id = $12 AND organization_id = $13`,
+           WHERE id = $12 AND organization_id = $13
+           RETURNING id`,
           [
             validatedData.name,
             validatedData.company,
@@ -292,8 +294,61 @@ export async function updateClientAction(clientId: string, formData: FormData) {
           ]
         )
       }
-    } catch (err) {
-      updateError = err
+
+      // Fallback: If caller is super admin, allow updating by id alone if tenant org didn't match
+      if ((updateRes?.rowCount ?? 0) === 0 && session.isSuperAdmin) {
+        if (tags !== undefined) {
+          updateRes = await query(
+            `UPDATE clients
+             SET name = $1, company = $2, email = $3, phone = $4, platform = $5,
+                 country = $6, currency = $7, payment_schedule = $8, status = $9,
+                 communication_mode = $10, notes = $11, tags = $12, updated_at = NOW()
+             WHERE id = $13
+             RETURNING id`,
+            [
+              validatedData.name,
+              validatedData.company,
+              validatedData.email,
+              validatedData.phone,
+              validatedData.platform,
+              validatedData.country,
+              validatedData.currency,
+              validatedData.payment_schedule,
+              validatedData.status || rawData.status,
+              validatedData.communication_mode,
+              validatedData.notes,
+              tags,
+              clientId,
+            ]
+          )
+        } else {
+          updateRes = await query(
+            `UPDATE clients
+             SET name = $1, company = $2, email = $3, phone = $4, platform = $5,
+                 country = $6, currency = $7, payment_schedule = $8, status = $9,
+                 communication_mode = $10, notes = $11, updated_at = NOW()
+             WHERE id = $12
+             RETURNING id`,
+            [
+              validatedData.name,
+              validatedData.company,
+              validatedData.email,
+              validatedData.phone,
+              validatedData.platform,
+              validatedData.country,
+              validatedData.currency,
+              validatedData.payment_schedule,
+              validatedData.status || rawData.status,
+              validatedData.communication_mode,
+              validatedData.notes,
+              clientId,
+            ]
+          )
+        }
+      }
+    } catch (err: any) {
+      console.error('Failed to update client in database:', err)
+      return { error: err?.message || 'Failed to update client in database.' }
     }
 
     try {
