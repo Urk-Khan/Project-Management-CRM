@@ -12,6 +12,7 @@ import {
   List as ListIcon,
   Plus,
   Trash2,
+  Edit2,
   Building2,
   Mail,
   Phone,
@@ -24,6 +25,7 @@ import {
 
 import { TagBadge } from './TagBadge'
 import { TagManagerModal } from './TagManagerModal'
+import { ClientEditModal } from './ClientEditModal'
 import { Tag as TagIcon } from 'lucide-react'
 
 export interface ClientRecord {
@@ -56,6 +58,7 @@ export function ClientsList({ initialClients, userRole, isSuperAdmin }: ClientsL
 
   const [viewMode, setViewMode] = useState<'table' | 'cards'>('table')
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [editingClient, setEditingClient] = useState<ClientRecord | null>(null)
   const [isTagManagerOpen, setIsTagManagerOpen] = useState(false)
 
   const [filters, setFilters] = useState<ClientFiltersState>({
@@ -380,18 +383,27 @@ export function ClientsList({ initialClients, userRole, isSuperAdmin }: ClientsL
                         {/* Actions */}
                         {canManage && (
                           <td className="px-4 py-4 text-right">
-                            <button
-                              onClick={() => handleDelete(client.id, client.name)}
-                              disabled={deletingId === client.id}
-                              className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition"
-                              title="Delete Client"
-                            >
-                              {deletingId === client.id ? (
-                                <Loader2 className="h-4 w-4 animate-spin text-destructive" />
-                              ) : (
-                                <Trash2 className="h-4 w-4" />
-                              )}
-                            </button>
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => setEditingClient(client)}
+                                className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition"
+                                title="Edit Client"
+                              >
+                                <Edit2 className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(client.id, client.name)}
+                                disabled={deletingId === client.id}
+                                className="rounded-lg p-1.5 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition"
+                                title="Delete Client"
+                              >
+                                {deletingId === client.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin text-destructive" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </button>
+                            </div>
                           </td>
                         )}
                       </tr>
@@ -468,18 +480,28 @@ export function ClientsList({ initialClients, userRole, isSuperAdmin }: ClientsL
                     </span>
 
                     {canManage && (
-                      <button
-                        onClick={() => handleDelete(client.id, client.name)}
-                        disabled={deletingId === client.id}
-                        className="flex items-center gap-1 text-muted-foreground hover:text-destructive transition"
-                      >
-                        {deletingId === client.id ? (
-                          <Loader2 className="h-3.5 w-3.5 animate-spin text-destructive" />
-                        ) : (
-                          <Trash2 className="h-3.5 w-3.5" />
-                        )}
-                        <span>Delete</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setEditingClient(client)}
+                          className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition"
+                          title="Edit Client"
+                        >
+                          <Edit2 className="h-3.5 w-3.5" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDelete(client.id, client.name)}
+                          disabled={deletingId === client.id}
+                          className="flex items-center gap-1 text-muted-foreground hover:text-destructive transition"
+                        >
+                          {deletingId === client.id ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-destructive" />
+                          ) : (
+                            <Trash2 className="h-3.5 w-3.5" />
+                          )}
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                 </div>
@@ -487,6 +509,16 @@ export function ClientsList({ initialClients, userRole, isSuperAdmin }: ClientsL
             </div>
           )}
         </>
+      )}
+
+      {/* Client Edit Modal */}
+      {editingClient && (
+        <ClientEditModal
+          key={editingClient.id}
+          client={editingClient}
+          isOpen={!!editingClient}
+          onClose={() => setEditingClient(null)}
+        />
       )}
 
       {/* Tag Manager Modal */}
